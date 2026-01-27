@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # Banco de Dados SQLite (armazenado em volume)
+  db:
+    image: sqlite:latest
+    container_name: maxiprod-db
+    volumes:
+      - db_data:/data
+    environment:
+      - SQLITE_DATA=/data/app.db
+    networks:
+      - maxiprod-network
+
+  # API .NET 8.0
+  api:
+    build:
+      context: ./Server
+      dockerfile: Dockerfile
+    container_name: maxiprod-api
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_URLS=http://+:5000
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/app.db
+      - JWT_SECRET=your-secret-key-change-in-production
+      - JWT_ISSUER=maxiprod-api
+      - JWT_AUDIENCE=maxiprod-client
+    volumes:
+      - api_data:/app/data
+    depends_on:
+      - db
+    networks:
+      - maxiprod-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Frontend React/Vite
+  frontend:
+    build:
+      context: ./Client
+      dockerfile: Dockerfile
+    container_name: maxiprod-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:5000
+    depends_on:
+      - api
+    networks:
+      - maxiprod-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  db_data:
+    driver: local
+  api_data:
+    driver: local
+
+networks:
+  maxiprod-network:
+    driver: bridge
