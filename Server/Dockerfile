@@ -31,7 +31,7 @@ RUN mkdir -p /app/data
 
 # Variáveis de ambiente
 ENV ASPNETCORE_URLS=http://+:5000
-ENV ASPNETCORE_ENVIRONMENT=Production
+ENV ASPNETCORE_ENVIRONMENT=Development
 
 # Expor porta
 EXPOSE 5000
